@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="rubik.css"/>
+    <script type="text/javascript" src="./common/common.js"></script>
+    <script type="text/javascript" src="./common/matrix.js"></script>
+    <script type="text/javascript" src="./cube/cube.js"></script>
+    <script type="text/javascript" src="./rubik.js"></script>
+    <title>Rubik</title>
+</head>
+<body>
+    <canvas id="webgl">
+        Please use the browser supporting webgl.
+    </canvas>
+
+    <script id="vshader" type="GLSL">#version 300 es
+        precision mediump float;
+
+        layout(location = 0) in vec3 a_position;
+        layout(location = 1) in vec2 a_texcoord;
+
+        uniform mat4 u_view;
+        uniform mat4 u_translate, u_rotate, u_scale;
+
+        out vec2 v_texcoord;
+
+        void main()
+        {
+            gl_Position = u_view * u_translate * u_rotate * u_scale * vec4(a_position, 1.0);
+
+            v_texcoord = a_texcoord;
+        }
+    </script>
+
+    <script id="fshader" type="GLSL">#version 300 es
+        precision mediump float;
+
+        uniform sampler2D u_textures;
+
+        in vec2 v_texcoord;
+
+        out vec4 fragColor;
+
+        void main()
+        {
+            fragColor = texture(u_textures, v_texcoord);
+            //fragColor = vec4(0.0, 0.0, 1.0, 1.0);
+        }
+    </script>
+</body>
+</html>
