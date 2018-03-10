@@ -68,17 +68,22 @@ Cube.toOffsetFace = function () {
     }
 };
 
-Cube.cube = function (offset, indices) { //位移贴图
-    var p = 25 + offset;
+Cube.cube = function (indices) { //位移贴图
+    var minX = indices.offsetX - 25;
+    var maxX = indices.offsetX + 25;
+    var minY = indices.offsetY - 25;
+    var maxY = indices.offsetY + 25;
+    var minZ = indices.offsetZ - 25;
+    var maxZ = indices.offsetZ + 25;
     var points = [
-        vec3(-p, -p, p),
-        vec3(p, -p, p),
-        vec3(p, p, p),
-        vec3(-p, p, p),
-        vec3(-p, -p, -p),
-        vec3(p, -p, -p),
-        vec3(p, p, -p),
-        vec3(-p, p, -p)
+        vec3(minX, minY, maxZ),
+        vec3(maxX, minY, maxZ),
+        vec3(maxX, maxY, maxZ),
+        vec3(minX, maxY, maxZ),
+        vec3(minX, minY, minZ),
+        vec3(maxX, minY, minZ),
+        vec3(maxX, maxY, minZ),
+        vec3(minX, maxY, minZ)
     ];
     return cube = {
         position: [
