@@ -303,6 +303,19 @@ function mult( u, v )
 
         return result;
     }
+    else if(u.matrix){
+        for ( var i = 0; i < u.length; ++i ) {
+            if ( u[i].length != v.length ) {
+                throw "mult(): trying to add matrices of different dimensions";
+            }
+        }
+
+        for(var i = 0; i < v.length; ++i){
+            result.push(dot(u[i], v));
+        }
+
+        return result;
+    }
     else {
         if ( u.length != v.length ) {
             throw "mult(): vectors are not the same dimension";
