@@ -375,10 +375,12 @@ window.onload = function () {
             ];
         }();
         // console.log(indices);
-        var per_rotates = [];
         var cubes = indices.map(function (item, index, array) {
-            array[index] = index; //将index转成索引
-            per_rotates.push(mat4());
+            array[index] = {
+                index: index,
+                position: vec4(item.offsetX, item.offsetY, item.offsetZ, 1.0),
+                per_rotate: mat4()
+            }; //将index转成索引
             return Cube.cube(item);
         });
         // console.log(cubes);
@@ -408,7 +410,7 @@ window.onload = function () {
             translate: translate(0.0, 0.0, -360.0),
             view: mat4()
         };
-        var rotateStatus = {
+        var rotateLayer = {
             F: 0, //%9 == 1||2||3
             M: 1, //%9 == 4||5||6
             B: 2, //%9 == 7||8||9
@@ -430,7 +432,8 @@ window.onload = function () {
             tx: 0,
             ty: 0,
             pressed: false,
-            isRotate: false
+            isRotate: false,
+            lastTime: Date.now()
         };
         // console.log(global.tx);
 
@@ -457,59 +460,23 @@ window.onload = function () {
             gl.uniformMatrix4fv(gl.getUniformLocation(program, "u_scale"), false,
                 flatten(controller.scale));
 
-            indices.forEach(function (item, index) {
-                // var status = false;
-                // switch (global.isRotate){
-                //     case false: break;
-                //     case rotateStatus.F:
-                //         if(index % 9 === 0 || index % 9 === 1 || index % 9 === 2) status = true;
-                //         break;
-                //     case rotateStatus.M:
-                //         if(index % 9 === 3 || index % 9 === 4 || index % 9 === 5) status = true;
-                //         break;
-                //     case rotateStatus.B:
-                //         if(index % 9 === 6 || index % 9 === 7 || index % 9 === 8) status = true;
-                //         break;
-                //     case rotateStatus.L:
-                //         if(index % 3 === 0) status = true;
-                //         break;
-                //     case rotateStatus.V:
-                //         if(index % 3 === 1) status = true;
-                //         break;
-                //     case rotateStatus.R:
-                //         if(index % 3 === 2) status = true;
-                //         break;
-                //     case rotateStatus.D:
-                //         if(index < 9) status = true;
-                //         break;
-                //     case rotateStatus.H:
-                //         if(index >= 9 && index < 18) status = true;
-                //         break;
-                //     case rotateStatus.U:
-                //         if(index >= 18) status = true;
-                //         break;
-                // }
-                //
-                // if(status) gl.uniformMatrix4fv(gl.getUniformLocation(program, "per_rotate"),
-                //     false, flatten(global.rotate));
-                // else gl.uniformMatrix4fv(gl.getUniformLocation(program, "per_rotate"),
-                //     false, flatten(mat4()));
+            indices.forEach(function (item) {
 
                 gl.uniformMatrix4fv(gl.getUniformLocation(program, "per_rotate"), false,
-                    flatten(per_rotates[item]));
+                    flatten(item.per_rotate));
 
                 var a_position = gl.getAttribLocation(program, 'a_position');
                 var a_texcoord = gl.getAttribLocation(program, 'a_texcoord');
 
                 gl.enableVertexAttribArray(a_position);
-                gl.bindBuffer(gl.ARRAY_BUFFER, buffers[item].position);
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers[item.index].position);
                 gl.vertexAttribPointer(a_position, 3, gl.FLOAT, false, 0, 0);
 
                 gl.enableVertexAttribArray(a_texcoord);
-                gl.bindBuffer(gl.ARRAY_BUFFER, buffers[item].texcoord);
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers[item.index].texcoord);
                 gl.vertexAttribPointer(a_texcoord, 2, gl.FLOAT, false, 0, 0);
 
-                gl.drawArrays(gl.TRIANGLES, 0, cubes[item].position.length);
+                gl.drawArrays(gl.TRIANGLES, 0, cubes[item.index].position.length);
                 // console.log(cube.position.length);
 
                 gl.disableVertexAttribArray(a_position);
@@ -522,9 +489,125 @@ window.onload = function () {
             var ray = vec4(x, y, -720); //vec4(x, y, -depth) - eye_position
 
         }
+
+        //set global.lastTime first
+        function moveCube(layer, dir) {
+            // console.log(global.isRotate);
+            if(!global.isRotate){
+                global.isRotate = true;
+                var cubeIndex, axis;
+                if(dir != -1) dir = 1;
+                switch (layer){
+                    case rotateLayer.F:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index % 9 === 0 || index % 9 === 1 || index % 9 === 2;
+                        });
+                        axis = multiply(dir, vec3(0, 0, -1));
+                        break;
+                    case rotateLayer.M:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index % 9 === 3 || index % 9 === 4 || index % 9 === 5;
+                        });
+                        axis = multiply(dir, vec3(0, 0, -1));
+                        break;
+                    case rotateLayer.B:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index % 9 === 6 || index % 9 === 7 || index % 9 === 8;
+                        });
+                        axis = multiply(dir, vec3(0, 0, 1));
+                        break;
+                    case rotateLayer.L:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index % 3 === 0;
+                        });
+                        axis = multiply(dir, vec3(-1, 0, 0));
+                        break;
+                    case rotateLayer.V:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index % 3 === 1;
+                        });
+                        axis = multiply(dir, vec3(-1, 0, 0));
+                        break;
+                    case rotateLayer.R:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index % 3 === 2;
+                        });
+                        axis = multiply(dir, vec3(1, 0, 0));
+                        break;
+                    case rotateLayer.D:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index < 9;
+                        });
+                        axis = multiply(dir, vec3(0, -1, 0));
+                        break;
+                    case rotateLayer.H:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index >= 9 && index < 18;
+                        });
+                        axis = multiply(dir, vec3(0, -1, 0));
+                        break;
+                    case rotateLayer.U:
+                        cubeIndex = indices.filter(function (value, index) {
+                            return index >= 18;
+                        });
+                        axis = multiply(dir, vec3(0, 1, 0));
+                        break;
+                }
+                if(cubeIndex){
+                    (function move(cubeIndex, axis, startTime, lastTime, currentTime) {
+                        if(startTime === 0){
+                            window.requestAniFrame(function (current) {
+                                // console.log(current + '\t' + startTime);
+                                move(cubeIndex, axis, current, current, current);
+                            });
+                            return;
+                        }
+                        else if(currentTime - startTime >= 600) {
+                            var angle = 3.0 * (startTime + 600 - lastTime) / 20;
+                            var tmp = []; //深复制对象
+                            cubeIndex.forEach(function (item) {
+                                item.per_rotate = mult(rotate(angle, axis), item.per_rotate);
+                                tmp.push({
+                                    index: item.index,
+                                    position: item.position,
+                                    per_rotate: item.per_rotate
+                                });
+                            });
+                            tmp.forEach(function (item) {
+                                item.position = mult(rotate(90, axis), item.position);
+                                for (var i = 0; i < indices.length; ++i){
+                                    if(length(subtract(item.position, indices[i].position)) <= 1){
+                                        // console.log(item.position + '\t' + indices[i].position);
+                                        // console.log(item.index + '\t' + indices[i].index);
+                                        indices[i].index = item.index;
+                                        indices[i].per_rotate = item.per_rotate;
+                                        break;
+                                    }
+                                }
+                            });
+                            // console.log(indices);
+                            global.isRotate = false;
+                            return;
+                        }
+                        else {
+                            var angle = 3.0 * (currentTime - lastTime) / 20;
+                            cubeIndex.forEach(function (item) {
+                                item.per_rotate = mult(rotate(angle, axis), item.per_rotate);
+                            });
+                        }
+                        window.requestAniFrame(function (current) {
+                            // console.log(current + '\t' + startTime);
+                            move(cubeIndex, axis, startTime, currentTime, current);
+                        });
+                    })(cubeIndex, axis, 0);
+                }
+            }
+        }
         
         function onMouseDown(event) {
             // console.log(event);
+            // if(event.which === 1) moveCube(rotateLayer.F, -1);
+            // if(event.which === 3) moveCube(rotateLayer.L, 1);
             if (event.which === 1 || event.which === 0){
                 isIntersect(event.x, event.y);
                 global.rx = event.x;
@@ -595,6 +678,29 @@ window.onload = function () {
                 global.scale = mult(scale(0.9, 0.9, 0.9), global.scale);
             }
             // console.log(global.scale);
+        }, false);
+        window.addEventListener("keypress", function (event) {
+            // console.log(event);
+            switch (event.key){
+                case 'F': moveCube(rotateLayer.F); break;
+                case 'f': moveCube(rotateLayer.F, -1); break;
+                case 'M': moveCube(rotateLayer.M); break;
+                case 'm': moveCube(rotateLayer.M, -1); break;
+                case 'B': moveCube(rotateLayer.B); break;
+                case 'b': moveCube(rotateLayer.B, -1); break;
+                case 'L': moveCube(rotateLayer.L); break;
+                case 'l': moveCube(rotateLayer.L, -1); break;
+                case 'V': moveCube(rotateLayer.V); break;
+                case 'v': moveCube(rotateLayer.V, -1); break;
+                case 'R': moveCube(rotateLayer.R); break;
+                case 'r': moveCube(rotateLayer.R, -1); break;
+                case 'D': moveCube(rotateLayer.D); break;
+                case 'd': moveCube(rotateLayer.D, -1); break;
+                case 'H': moveCube(rotateLayer.H); break;
+                case 'h': moveCube(rotateLayer.H, -1); break;
+                case 'U': moveCube(rotateLayer.U); break;
+                case 'u': moveCube(rotateLayer.U, -1); break;
+            }
         }, false);
 
         (function update() {

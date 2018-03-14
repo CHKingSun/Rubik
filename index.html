@@ -28,7 +28,7 @@
 
         void main()
         {
-            gl_Position = u_view * u_translate * per_rotate * u_rotate * u_scale * vec4(a_position, 1.0);
+            gl_Position = u_view * u_translate * u_rotate * per_rotate * u_scale * vec4(a_position, 1.0);
 
             v_texcoord = a_texcoord;
         }
